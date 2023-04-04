@@ -6,7 +6,7 @@ Created on Mon Apr  3 13:27:31 2023
 @author: eriel
 """
 import streamlit as st
-import numpy as np
+#import numpy as np
 import pandas as pd
 
 st.title("Search for bird by tx channel or id")
