@@ -3,6 +3,8 @@
 
 '''
 Note: dateTime is the date of the tx off (removed), date on (installed) is the dateTime of the prev row
+use UHFID from tx table for tx channel
+date in Dusky is NZST, date in JSON is UTC
 '''
 
 import numpy as np
@@ -10,6 +12,8 @@ import pandas as pd
 
 records = pd.read_csv("dat/processed/records_for_tx_use02.csv", encoding='ISO-8859-1')
 tx = pd.read_csv("dat/processed/tx.csv", encoding='ISO-8859-1')
+
+uhf = tx[['txId','channel', 'uhfId']]
 
 records_head = records.head(1000)
 
@@ -22,6 +26,16 @@ collist = ['harnessChangeOnly', 'newStatus','prox', 'proxOn', 'recoveryID', 'rem
 records_head2 = records_head.dropna(subset=['txFrom'])  # NB! txFrom can be NA
 records_head3 = records_head.dropna(subset=['txFrom', 'txTo'], how='all') 
 # want to check for NA in ALL cols
+
+#region convert date
+''' Some dates don't match Dusky web (out by about a day), suggestion is that JSON
+dates are UTC, Dusky web NZST. Conversion here works (UTC to NZST) but still doesn't match Dusky web
+'''
+records['dateTime'] = pd.to_datetime(records['dateTime'], errors = 'coerce')  # FIXME: errors='coerce' will set val as NAN, check it doesn't interfere later
+
+# records['dateTime'] = records['dateTime'].dt.tz_localize('utc').dt.tz_convert('Pacific/Auckland')
+# #endregion // convert date
+
 
 #region txIdForTxUniqueId
 txFrom = "a8db17a5-49d3-4382-b0d8-36d1ee0d5013"
@@ -61,22 +75,6 @@ mytxid = "89df0830-227f-40fc-a342-46014bb9b25e"
 print("txId for %s is:" % mytxid, getTxId2(mytxid))
 print("txChannel for %s is:" % mytxid, getTxId3(mytxid))
 
-''' next: for a certain datetime, get transmitter and channel
-date == 16/09/2020
-return (tx_id, channel)
-
-datetime_range = null
-16/08/2020 on = dateTime_range[end]
-14/08/2021 off = datetime_range[start]
-
-df.loc[df["date"] == "2005-12-22", "AIR_TEMP"]
-
-date_columns = df.filter(regex='Date').columns
-df[date_columns] = df[date_columns].apply(pd.to_datetime, format='%d/%m/%Y')
-
-in_between = df.purchaseDate.between(df.releaseDate, df.ceaseDate)
-df['status'] = np.where(in_between, 'Active', 'Inactive')
-'''
 
 #region full records
 records_tx = records.dropna(subset=['txFrom', 'txTo'], how='all')
@@ -111,6 +109,24 @@ records_tx['txDateOn'] = records_tx.groupby('birdName')['dateTime'].shift(-1)
 # records_new = pd.read_csv("31-03-2023-records_tx.csv")
 
 #endregion //find date
+
+#region search by date
+''' next: for a certain datetime, get transmitter and channel
+date == 16/09/2020
+return (tx_id, channel)
+
+datetime_range = null
+16/08/2020 on = dateTime_range[end]
+14/08/2021 off = datetime_range[start]
+
+df.loc[df["date"] == "2005-12-22", "AIR_TEMP"]
+
+date_columns = df.filter(regex='Date').columns
+df[date_columns] = df[date_columns].apply(pd.to_datetime, format='%d/%m/%Y')
+
+in_between = df.purchaseDate.between(df.releaseDate, df.ceaseDate)
+df['status'] = np.where(in_between, 'Active', 'Inactive')
+'''
 
 #region test cases
 orion = records_tx[records_tx['birdName'] == 'Orion']
@@ -149,8 +165,4 @@ resCase3 = records_tx[(records_tx['txChannel'] == myTxCh ) & (records_tx['island
 
 #endregion // test cases
 
-''' 
-jupyter interactive widget
-publishing notebooks with plotly
-'''
 
